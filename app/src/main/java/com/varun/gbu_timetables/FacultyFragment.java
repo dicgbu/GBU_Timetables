@@ -1,6 +1,7 @@
 package com.varun.gbu_timetables;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
@@ -13,13 +14,12 @@ import android.view.ViewTreeObserver;
 import android.widget.ExpandableListView;
 
 import com.varun.gbu_timetables.adaptor.SectionsFacultyAdapter;
-import com.varun.gbu_timetables.data.database.TimetableContract;
+import com.varun.gbu_timetables.data.Database.TimetableContract;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -40,7 +40,7 @@ public class FacultyFragment extends Fragment {
         progressDialog.setCancelable(false);
         progressDialog.setInverseBackgroundForced(false);
 
-        HeaderListData = new ArrayList<>();
+        HashSet<String> RedundantHeaderListData = new HashSet<>();
         ChildrenListData = new HashMap<>();
 
         Uri Faculty_uri = TimetableContract.BuildFaculty();
@@ -52,7 +52,7 @@ public class FacultyFragment extends Fragment {
             ct.id = faculty_cursor.getLong(faculty_cursor.getColumnIndex("faculty_id"));
             ct.Name = faculty_cursor.getString(faculty_cursor.getColumnIndex("name"));
 
-            HeaderListData.add(school);
+            RedundantHeaderListData.add(school);
 
             List<SectionsFacultyAdapter.Common_type> facultyList = ChildrenListData.get(school);
             if (facultyList == null) facultyList = new ArrayList<>();
@@ -61,10 +61,7 @@ public class FacultyFragment extends Fragment {
         }
         faculty_cursor.close();
 
-        Set<String> hs = new LinkedHashSet<>(HeaderListData); // now we remove duplicates
-        HeaderListData.clear();
-        HeaderListData.addAll(hs);
-
+        HeaderListData = new ArrayList<>(RedundantHeaderListData);
         schoolsAdapter = new SectionsFacultyAdapter(getContext(), HeaderListData, ChildrenListData);
     }
 
@@ -73,18 +70,19 @@ public class FacultyFragment extends Fragment {
                              Bundle savedInstanceState) {
 
         View rootView = inflater.inflate(R.layout.expandable_listview, container, false);
-        final ExpandableListView schools_lv = (ExpandableListView) rootView.findViewById(R.id.expandableListView);
+        final ExpandableListView schools_lv = rootView.findViewById(R.id.expandableListView);
 
         schools_lv.setAdapter(schoolsAdapter);
 
+        Context context = getContext();
         ViewTreeObserver vto = schools_lv.getViewTreeObserver();
         vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
                 if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                    schools_lv.setIndicatorBounds(schools_lv.getRight() - Utility.convertDpToPixel(60, getContext()), schools_lv.getWidth());
+                    schools_lv.setIndicatorBounds(schools_lv.getRight() - Utility.convertDpToPixel(60, context), schools_lv.getWidth());
                 } else {
-                    schools_lv.setIndicatorBoundsRelative(schools_lv.getRight() - Utility.convertDpToPixel(60, getContext()), schools_lv.getWidth());
+                    schools_lv.setIndicatorBoundsRelative(schools_lv.getRight() - Utility.convertDpToPixel(60, context), schools_lv.getWidth());
                 }
             }
         });

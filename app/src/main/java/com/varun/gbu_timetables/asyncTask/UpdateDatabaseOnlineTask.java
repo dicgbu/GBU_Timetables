@@ -11,15 +11,16 @@ import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
-import android.support.v4.content.IntentCompat;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.varun.gbu_timetables.BuildConfig;
 import com.varun.gbu_timetables.MainActivity;
 import com.varun.gbu_timetables.R;
-import com.varun.gbu_timetables.data.database.TimetableContract;
-import com.varun.gbu_timetables.data.database.TimetableDbHelper;
-import com.varun.gbu_timetables.data.database.TimetableProvider;
+import com.varun.gbu_timetables.data.Database.TimetableContract;
+import com.varun.gbu_timetables.data.Database.TimetableDbHelper;
+import com.varun.gbu_timetables.data.Database.TimetableProvider;
+import com.varun.gbu_timetables.data.MD5;
 
 import org.json.JSONObject;
 
@@ -31,11 +32,14 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Random;
 
 public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
 
     private final Context mContext;
-    private boolean silent = false;
+    private final String checksumUrlLocation = "http://www.gbuonline.in/timetable/md5.php";
+    private final String downloadUrlLocation = "http://www.gbuonline.in/timetable/varun.sqlite";
+    private boolean silent;
 
     public UpdateDatabaseOnlineTask(Context context, boolean silent) {
         mContext = context;
@@ -44,15 +48,14 @@ public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
 
     @Override
     protected Integer doInBackground(Void... params) {
-        String url_str = "http://gbuonline.in/timetable_md5/md5.php";
         HttpURLConnection urlConnection;
         BufferedReader reader;
         String server_str;
         String server_md5;
         publishProgress("Checking for timetable updates");
         try {
-            URL url = new URL(url_str);
-            urlConnection = (HttpURLConnection) url.openConnection();
+            URL checksumUrl = new URL(checksumUrlLocation);
+            urlConnection = (HttpURLConnection) checksumUrl.openConnection();
             urlConnection.setRequestMethod("GET");
             urlConnection.connect();
 
@@ -77,17 +80,15 @@ public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
             String db_md5 = preferences.getString(TimetableDbHelper.DB_MD5_PATH, null);
 
             if (!server_md5.equals(db_md5)) {
+                URL downloadUrl = new URL(downloadUrlLocation);
                 publishProgress("Newer timetables found, downloading");
-                URL download_url = new URL("http://gbuonline.in/timetable/varun.db");
-                URLConnection dl_url_connection = download_url.openConnection();
+                URLConnection dl_url_connection = downloadUrl.openConnection();
                 dl_url_connection.connect();
-                String downloaded_file_path = "download.db";
-                FileOutputStream saved = mContext.openFileOutput(downloaded_file_path, Context.MODE_PRIVATE);
+                String DownloadedDBFileName = "download.db";
+                FileOutputStream saved = mContext.openFileOutput(DownloadedDBFileName, Context.MODE_PRIVATE);
 
                 publishProgress("Application will restart after update");
                 InputStream download_stream = dl_url_connection.getInputStream();
-                if (dl_url_connection == null)
-                    return -1;
 
                 byte mbuffer[] = new byte[1024];
 
@@ -96,10 +97,16 @@ public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
                     saved.write(mbuffer, 0, length);
                 }
 
+                File DownloadedDbFile = new File(mContext.getFilesDir() + "/" + DownloadedDBFileName);
+
+                //Check if downloaded file has MD5 sum from the server to avoid incomplete downloads.
+                if (!MD5.checkMD5(server_md5, DownloadedDbFile))
+                    return -1;
+
                 TimetableDbHelper timetableDbHelper = new TimetableDbHelper(mContext);
-                timetableDbHelper.copy_db(mContext, 1, downloaded_file_path);
-                File f = new File(downloaded_file_path);
-                f.delete();
+                timetableDbHelper.overwriteDB(mContext, 1, DownloadedDBFileName);
+
+                DownloadedDbFile.delete(); //Not Required
 
                 /*Uri reloadDBUri = TimetableContract.RELOAD_DB_URI;
                 mContext.getContentResolver().query(reloadDBUri,null,null,null,null);
@@ -107,10 +114,12 @@ public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
 
                 ContentResolver resolver = mContext.getContentResolver(); //no need of non working uri method - better way
                 ContentProviderClient client = resolver.acquireContentProviderClient(TimetableContract.CONTENT_AUTHORITY);
-                TimetableProvider provider = (TimetableProvider) client.getLocalContentProvider();
-                provider.reloadDb();
-                client.release();
 
+                TimetableProvider provider = (TimetableProvider) client.getLocalContentProvider();
+                if (provider != null) {
+                    provider.reloadDb();
+                }
+                client.release();
                 publishProgress("Timetables Updated Successfully!");
                 return 1;
             } else {
@@ -120,8 +129,8 @@ public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
         } catch (Exception e) {
             publishProgress("Update Failed: An internet error occurred");
             Log.d("error", e.toString());
+            return -1;
         }
-        return 0;
     }
 
     @Override
@@ -134,8 +143,7 @@ public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
 
     @Override
     protected void onPostExecute(Integer status) {
-        if (status == 1) {
-            if (!silent) {
+        if (status == 1 && !silent) {
                 /* Old code that restarted app
                 Intent mStartActivity = new Intent(mContext, MainActivity.class);
                 int mPendingIntentId = 123456;
@@ -145,16 +153,27 @@ public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
                 System.exit(0);
                 */
 
-                Intent intent = new Intent(mContext, MainActivity.class);
-                intent.addFlags(IntentCompat.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                mContext.startActivity(intent);
+            Intent intent = new Intent(mContext, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            mContext.startActivity(intent);
 
-            } else {
+        } else if (silent) {
+
+            String title = "GBU Timetables";
+            String text;
+            if (status == 1)
+                text = "Newer timetables available";
+            else if (status == 0)
+                text = "Already up to date";
+            else
+                text = "Update Failed: An internet error occurred";
+
+            if (status == 1 || BuildConfig.DEBUG) {
                 NotificationCompat.Builder mBuilder =
                         new NotificationCompat.Builder(mContext)
-                                .setSmallIcon(R.mipmap.ic_launcher)
-                                .setContentTitle("GBU Timetables")
-                                .setContentText("Newer timetables have been downloaded");
+                                .setSmallIcon(R.drawable.ic_notification_statue_buddha)
+                                .setColor(mContext.getResources().getColor(R.color.app_bg_dark)).setContentTitle(title)
+                                .setContentText(text);
 
                 Intent resultIntent = new Intent(mContext, MainActivity.class);
 
@@ -169,8 +188,7 @@ public class UpdateDatabaseOnlineTask extends AsyncTask<Void, String, Integer> {
                 mBuilder.setContentIntent(resultPendingIntent);
                 NotificationManager mNotificationManager =
                         (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
-                mNotificationManager.notify(0, mBuilder.build());
-
+                mNotificationManager.notify((new Random()).nextInt(9999 - 1000) + 1000, mBuilder.build());
             }
         }
     }

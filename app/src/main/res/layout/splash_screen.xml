@@ -9,27 +9,38 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:background="?attr/app_bg_lighter_on_light_theme">
+        android:background="?attr/app_bg_lighter_on_light_theme"
+        android:gravity="top|center"
+        android:orientation="vertical">
 
-        <ImageView
-            android:id="@+id/image_view"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+        <LinearLayout
+            android:id="@+id/image_view_ll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="25dp">
+
+            <ImageView
+                android:id="@+id/image_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_margin="@android:dimen/app_icon_size"
+                android:contentDescription="@string/gbu_logo" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="50dp"
-            android:text="Open GBU"
+            android:text="@string/open_gbu"
             android:textSize="30sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="30dp"
             android:layout_marginTop="5dp"
-            android:text="http://github.com/opengbu"
+            android:text="@string/http_github_com_opengbu"
             android:textSize="20sp" />
     </LinearLayout>
 

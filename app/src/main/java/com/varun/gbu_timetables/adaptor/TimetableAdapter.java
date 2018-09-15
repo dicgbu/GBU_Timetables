@@ -3,6 +3,7 @@ package com.varun.gbu_timetables.adaptor;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -11,13 +12,16 @@ import android.widget.LinearLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
+import com.google.firebase.analytics.FirebaseAnalytics;
 import com.varun.gbu_timetables.R;
 import com.varun.gbu_timetables.Utility;
-import com.varun.gbu_timetables.data.database.TimetableContract;
-import com.varun.gbu_timetables.data.model.CSF;
-import com.varun.gbu_timetables.data.model.CSF_FAC_MAP_KEY;
-import com.varun.gbu_timetables.data.model.PairKey;
+import com.varun.gbu_timetables.data.Database.TimetableContract;
+import com.varun.gbu_timetables.data.Model.CSF;
+import com.varun.gbu_timetables.data.Model.CSF_FAC_MAP_KEY;
+import com.varun.gbu_timetables.data.Model.PairKey;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,15 +38,14 @@ public class TimetableAdapter {
     ArrayList<Integer> day_nos;
     String title;
     HashMap<CSF_FAC_MAP_KEY, CSF> CSF_Details = new HashMap();
-
     HashMap<PairKey, String> cache = new HashMap();
     HashMap<PairKey, HashSet> keymap = new HashMap<>();
-
     int BgBoxDefault;
     int BgBoxPink;
     int BgBoxGreen;
     long max_period = 0;
     long min_period = 0;
+    private FirebaseAnalytics mFirebaseAnalytics;
 
     public TimetableAdapter(Context context, ArrayList<Integer> day_nos, Long timetable_id, String timetable_type, String title) {
         this.title = title;
@@ -51,14 +54,24 @@ public class TimetableAdapter {
         this.timetable_id = timetable_id;
         this.context = context;
 
-        Uri max_uri;
+        //some analytics
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        Bundle bundle = new Bundle();
+        bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, "TimetableOpen");
+        bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "text");
+        bundle.putString("Title", title);
+        bundle.putString("Timetable_Id", timetable_id.toString());
+        bundle.putString("Timetable_Type", timetable_type.toString().replaceAll(" ", "_"));
+        mFirebaseAnalytics.logEvent("TimetableOpen", bundle);
+
+        Uri maxMinUri;
         if (this.timetable_type.equals(TimetableContract.PATH_SECTION)) {
-            max_uri = TimetableContract.BuildMaxPeriodBySection(this.timetable_id);
+            maxMinUri = TimetableContract.BuildMaxPeriodBySection(this.timetable_id);
         } else {
-            max_uri = TimetableContract.BuildMaxPeriodByFaculty(this.timetable_id);
+            maxMinUri = TimetableContract.BuildMaxPeriodByFaculty(this.timetable_id);
         }
         //  Log.d("max_uri",max_uri.toString());
-        Cursor max_c = context.getContentResolver().query(max_uri, null, null, null, null);
+        Cursor max_c = context.getContentResolver().query(maxMinUri, null, null, null, null);
         max_c.moveToNext();
         max_period = max_c.getLong(max_c.getColumnIndex("max(TT_Period)"));
         min_period = max_c.getLong(max_c.getColumnIndex("min(TT_Period)"));
@@ -235,10 +248,23 @@ public class TimetableAdapter {
                     time_string += " LAB";
 
             } catch (Exception e) {
-                Log.d("day_no", Integer.toString(Day_no));
-                Log.d("period_no", Integer.toString(Period_Pos));
-                Log.d("TimetableAdapter", "caught error in CSF_id" + CSF_Id.toString());
-                Log.d("TimetableAdapter", e.toString());
+                Log.d("TimetableAdapter", "day_no " + Integer.toString(Day_no));
+                Log.d("TimetableAdapter", "period_no " + Integer.toString(Period_Pos));
+                Log.d("TimetableAdapter", "CSF_id " + CSF_Id.toString());
+                Log.d("TimetableAdapter", e.toString(), e);
+                mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+                Bundle bundle = new Bundle();
+                bundle.putString(FirebaseAnalytics.Param.ITEM_CATEGORY, "CSF ERROR");
+                bundle.putString(FirebaseAnalytics.Param.CONTENT_TYPE, "text");
+                bundle.putString("day_no", Integer.toString(Day_no));
+                bundle.putString("period_no", Integer.toString(Period_Pos));
+                bundle.putString("CSF_id", CSF_Id.toString());
+                bundle.putString("exception", e.toString());
+
+                StringWriter errors = new StringWriter();
+                e.printStackTrace(new PrintWriter(errors));
+                bundle.putString("StackTrace", errors.toString());
+                mFirebaseAnalytics.logEvent("Error", bundle);
             }
         }
         cursor.close();

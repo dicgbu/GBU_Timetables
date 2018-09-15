@@ -45,14 +45,23 @@ public class UpdateDatabaseService extends Service {
      */
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
         if (updateDatabaseOnlineTask != null)
             if (updateDatabaseOnlineTask.getStatus() == AsyncTask.Status.RUNNING)
                 return mStartMode;
+
 
         updateDatabaseOnlineTask = new UpdateDatabaseOnlineTask(getApplicationContext(), true);
         updateDatabaseOnlineTask.execute();
 
         mStartMode = Service.START_NOT_STICKY;
+
+        /* only show notification when database updated.
+         * Notification should be displayed only when task is complete,
+         * calling updateDatabaseOnlineTask.execute() starts the task
+         * but does not wait for execution, so we can't know result here
+         * Additionally, there was already some code in task for this purpose.*/
+
         return mStartMode;
     }
 

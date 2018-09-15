@@ -1,4 +1,4 @@
-package com.varun.gbu_timetables.data.database;
+package com.varun.gbu_timetables.data.Database;
 
 import android.annotation.TargetApi;
 import android.content.ContentProvider;
@@ -100,9 +100,10 @@ public class TimetableProvider extends ContentProvider {
 
     private Cursor getSectionsByProgramID(Uri uri) {
         Long program_id = TimetableContract.getProgramFromUri(uri);
-        String query = "SELECT _ROWID_ as _id,id as section_id,name from Section" +
-                " where ShowTimetable = 1 and  program = " + program_id
-                + " order by Section.name";
+        String query = "SELECT distinct Section._ROWID_ as _id,id as section_id,name from Section,M_Time_Table" +
+                " where ShowTimetable = 1 and program = " + program_id + " and Section.id = M_Time_Table.Section_Id"
+                + " order by Section.name ";
+
         return mOpenHelper.getReadableDatabase().rawQuery(query, null);
     }
 
@@ -146,7 +147,7 @@ public class TimetableProvider extends ContentProvider {
         cursor.moveToNext();
         String code = cursor.getString(cursor.getColumnIndex("Subject_Code")).trim();
         cursor.close();
-        String sub_query = "SELECT _ROWID_ as _id,code,name FROM Subject Where code= '" + code + "'";
+        String sub_query = "SELECT _ROWID_ as _id,code,name FROM Subject Where code like '%" + code + "%'";
         return mOpenHelper.getReadableDatabase().rawQuery(sub_query, null);
     }
 
