@@ -1,20 +1,22 @@
 package com.varun.gbu_timetables;
 
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.ExpandableListView;
 
+import androidx.fragment.app.Fragment;
+
 import com.varun.gbu_timetables.adaptor.SectionsFacultyAdapter;
-import com.varun.gbu_timetables.data.Database.TimetableContract;
+import com.varun.gbu_timetables.data.database.TimetableContract;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,6 +34,7 @@ public class FacultyFragment extends Fragment {
     ProgressDialog progressDialog;
     SectionsFacultyAdapter schoolsAdapter;
 
+    @SuppressLint("Range")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,10 +50,10 @@ public class FacultyFragment extends Fragment {
         Cursor faculty_cursor = getContext().getContentResolver().query(Faculty_uri, null, null, null, null);
 
         while (faculty_cursor.moveToNext()) {
-            String school = faculty_cursor.getString(faculty_cursor.getColumnIndex("school"));
+            @SuppressLint("Range") String school = faculty_cursor.getString(faculty_cursor.getColumnIndex("school"));
             SectionsFacultyAdapter.Common_type ct = new SectionsFacultyAdapter.Common_type();
             ct.id = faculty_cursor.getLong(faculty_cursor.getColumnIndex("faculty_id"));
-            ct.Name = faculty_cursor.getString(faculty_cursor.getColumnIndex("name"));
+            ct.Name = faculty_cursor.getString(faculty_cursor.getColumnIndex("TeacherName"));
 
             RedundantHeaderListData.add(school);
 
@@ -79,11 +82,8 @@ public class FacultyFragment extends Fragment {
         vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
-                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                    schools_lv.setIndicatorBounds(schools_lv.getRight() - Utility.convertDpToPixel(60, context), schools_lv.getWidth());
-                } else {
-                    schools_lv.setIndicatorBoundsRelative(schools_lv.getRight() - Utility.convertDpToPixel(60, context), schools_lv.getWidth());
-                }
+                assert context != null;
+                schools_lv.setIndicatorBoundsRelative(schools_lv.getRight() - Utility.convertDpToPixel(60, context), schools_lv.getWidth());
             }
         });
 

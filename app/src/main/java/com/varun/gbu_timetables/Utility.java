@@ -9,11 +9,12 @@ import android.database.DatabaseUtils;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.preference.PreferenceManager;
-import android.support.v4.content.ContextCompat;
 import android.util.DisplayMetrics;
 import android.util.Log;
 
-import com.varun.gbu_timetables.data.Database.TimetableContract;
+import androidx.core.content.ContextCompat;
+
+import com.varun.gbu_timetables.data.database.TimetableContract;
 
 /**
  * com.varun.gbu_timetables (Timetables_sql)
@@ -32,7 +33,7 @@ public class Utility {
             return "Engineering";
         else if (src.equalsIgnoreCase("SOM"))
             return "Management";
-        else if (src.equalsIgnoreCase("SOLJ"))
+        else if (src.equalsIgnoreCase("SOLJG"))
             return "Law, Justice and Governance";
         else if (src.equalsIgnoreCase("SOBSC"))
             return "Buddhist Studies And Civilization";
@@ -52,7 +53,7 @@ public class Utility {
 
     //@SuppressLint("LogNotTimber")
     public static String getFullSectionName(String SectionCode, Context context) {
-        String splitted[] = SectionCode.split("-");
+        String[] splitted = SectionCode.split("-");
         String Year = null;
         //String Grp = null;
         if (splitted.length >= 2)
@@ -76,7 +77,9 @@ public class Utility {
         try {
 
             cursor.moveToFirst();
-            String SectionFullName = cursor.getString(cursor.getColumnIndex("Name"));
+            var colIndex = cursor.getColumnIndex("Name");
+            String SectionFullName = (colIndex < 0) ? "" : cursor.getString(colIndex);
+
             cursor.close();
             return SectionFullName + Year;
         } catch (Exception e) {
@@ -145,7 +148,7 @@ public class Utility {
         public static int getThemeId(Context context) {
             SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
 
-            String theme = sharedPreferences.getString(context.getString(R.string.pref_theme_key), "1"); //1 -> Default dark
+            String theme = sharedPreferences.getString(context.getString(R.string.pref_theme_key), "0"); //1 -> Default dark
             switch (theme) {
                 case "0":
                     return R.style.LightTheme;

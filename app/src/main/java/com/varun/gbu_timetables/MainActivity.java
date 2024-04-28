@@ -5,39 +5,47 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.support.design.widget.TabLayout;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.view.ViewPager;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.text.Html;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import com.crashlytics.android.Crashlytics;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.preference.PreferenceManager;
+import androidx.viewpager.widget.ViewPager;
+
+import com.google.android.gms.tasks.Task;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.play.core.appupdate.AppUpdateInfo;
+import com.google.android.play.core.appupdate.AppUpdateManager;
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
+import com.google.android.play.core.install.model.AppUpdateType;
+import com.google.android.play.core.install.model.UpdateAvailability;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.varun.gbu_timetables.asyncTask.UpdateDatabaseOnlineTask;
-import com.varun.gbu_timetables.data.Model.TimeTableBasic;
+import com.varun.gbu_timetables.data.model.TimeTableBasic;
 import com.varun.gbu_timetables.service.UpdateDatabaseService;
 
 import java.lang.reflect.Type;
 import java.util.Calendar;
 import java.util.HashSet;
-
-import io.fabric.sdk.android.Fabric;
+//import io.fabric.sdk.android.Fabric;
 
 public class MainActivity extends AppCompatActivity {
-
+    private static final int MY_REQUEST_CODE = 20220918;
     public static String ContentType_KEY = "NotificationContentType";
     public static String Content_KEY = "NotificationContent";
     UpdateDatabaseOnlineTask updateDatabaseOnlineTask;
@@ -45,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     TabLayout tabLayout;
     ViewPager viewPager;
     FragmentPagerAdapter fragmentPagerAdapter;
+
 
     public static boolean checkFavouritesExist(Context context) {
         Gson gson = new Gson();
@@ -56,15 +65,36 @@ public class MainActivity extends AppCompatActivity {
         Type favourites_type = new TypeToken<HashSet<TimeTableBasic>>() {
         }.getType(); //simply checking  string size doesn't work
 
+        //Type favourites_type = TypeToken.getParameterized(HashSet.class, TimeTableBasic.class).getType();
+
         return json != null && json.length() > 0 &&
                 ((HashSet<TimeTableBasic>) gson.fromJson(json, favourites_type)).size() > 0;
     }
 
+    //SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Fabric.with(this, new Crashlytics());
-        // Crashlytics.getInstance().crash();
+        AppUpdateManager appUpdateManager = AppUpdateManagerFactory.create(this);
+        Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
+
+        appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
+                    if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                            && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+
+                        try {
+                            appUpdateManager.startUpdateFlowForResult(appUpdateInfo, AppUpdateType.IMMEDIATE, this, MY_REQUEST_CODE);
+                        } catch (IntentSender.SendIntentException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                })
+                .addOnFailureListener(appUpdateInfo -> {
+                    Log.e("ImmediateUpdateActivity", "Failed to check for update");
+                });
+
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true);
 
         int saved_theme = Utility.ThemeTools.getThemeId(getApplicationContext());
         set_theme = R.style.AppTheme;
@@ -79,7 +109,6 @@ public class MainActivity extends AppCompatActivity {
         tabLayout = findViewById(R.id.tab_layout);
         viewPager = findViewById(R.id.pager);
 
-
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -88,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
         viewPager.setAdapter(fragmentPagerAdapter);
         viewPager.setOffscreenPageLimit(2); // Cache all pages = N-1
 
-        if (checkFavouritesExist(getApplicationContext()) == true)
+        if (checkFavouritesExist(getApplicationContext()))
             viewPager.setCurrentItem(2); // open favourites
         else
             viewPager.setCurrentItem(0); // open sections
@@ -199,7 +228,11 @@ public class MainActivity extends AppCompatActivity {
         } else if (id == R.id.action_info) {
             Intent intent = new Intent(getApplicationContext(), AboutActivity.class);
             startActivity(intent);
-        } else if (id == R.id.action_slack) {
+        } else if (id == R.id.action_notice) {
+            //  Intent intent = new Intent(getApplicationContext(), NoticesActivity.class);
+            // startActivity(intent);
+        }
+     /*  else if (id == R.id.action_slack) {
 
             AlertDialog.Builder builder1 = new AlertDialog.Builder(MainActivity.this);
             builder1.setTitle("Setup Slack");
@@ -223,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
             alertDialog.show();
 
 
-        }
+        }*/
 
         return super.onOptionsItemSelected(item);
     }
@@ -237,7 +270,7 @@ public class MainActivity extends AppCompatActivity {
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
         PendingIntent pi = PendingIntent.getService(getApplicationContext(), 0,
-                new Intent(getApplicationContext(), UpdateDatabaseService.class), PendingIntent.FLAG_UPDATE_CURRENT);
+                new Intent(getApplicationContext(), UpdateDatabaseService.class), PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
         //just in case there is an existing pending intent
         am.cancel(pi);
@@ -256,9 +289,10 @@ public class MainActivity extends AppCompatActivity {
         stopService(new Intent(getBaseContext(), UpdateDatabaseService.class));
     }
 
-    public class FragmentPagerAdapter extends android.support.v4.app.FragmentPagerAdapter {
+    public class FragmentPagerAdapter extends androidx.fragment.app.FragmentPagerAdapter {
         final int PAGE_COUNT = 3;
-        private String tabTitles[] = new String[]{"Sections", "Faculty", "Favourites"};
+        //private final String[] tabTitles = new String[]{"Notices", "Sections", "Faculty", "Favourites"};
+        private final String[] tabTitles = new String[]{"Sections", "Faculty", "Favourites"};
 
         public FragmentPagerAdapter(FragmentManager fm) {
             super(fm);
@@ -271,6 +305,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public Fragment getItem(int position) {
+            // if (position == 0)
+            //    return new NoticesFragment();
+            //  else
             if (position == 0)
                 return new SectionsFragment();
             else if (position == 1)

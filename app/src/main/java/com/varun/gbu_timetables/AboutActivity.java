@@ -1,11 +1,7 @@
 package com.varun.gbu_timetables;
 
 import android.content.Intent;
-import android.content.pm.PackageInfo;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-import android.text.Html;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextPaint;
@@ -17,7 +13,15 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.varun.gbu_timetables.service.MyFirebaseInstanceIdService;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.text.HtmlCompat;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.varun.gbu_timetables.service.MyFirebaseMessagingService;
 
 public class AboutActivity extends AppCompatActivity {
 
@@ -43,25 +47,55 @@ public class AboutActivity extends AppCompatActivity {
 
         TextView textView = findViewById(R.id.textView);
 
-        textView.setText(Html.fromHtml("<h2><b>GBU Timetables</b></h2>"));
-        String BuildInfo = "";
-        PackageInfo info;
-        try {
-            info = getPackageManager().getPackageInfo(getPackageName(), 0);
-            int build = info.versionCode;
-            String name = info.versionName;
-            BuildInfo = "Version " + name + "\n Build number " + Integer.toString(build) + "\n\n";
-        } catch (Exception e) {
-            Log.d("error", e.toString());
-        }
-        final String FinalBuildInfo = BuildInfo;
+        textView.setText(HtmlCompat.fromHtml("<h2><b>GBU Timetables</b></h2>", 0));
+        //PackageInfo info;
 
-        SpannableString ss = new SpannableString(BuildInfo);
+        String versionCode = String.valueOf(BuildConfig.VERSION_CODE);
+        String versionName = BuildConfig.VERSION_NAME;
+
+        //String BuildInfo =
+
+//        try {
+//            info = getPackageManager().getPackageInfo(getPackageName(), 0);
+//
+//            //PackageInfoCompat.getLongVersionCode(info);
+//
+//            int build = 0; // info.versionCode;
+//            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+//                build = (int) info.getLongVersionCode();
+//            } else {
+//                build = info.versionCode;
+//            }
+//            String name = info.versionName;
+//            BuildInfo = "Version " + name + "\n Build number " + build + "\n\n";
+//        } catch (Exception e) {
+//            Log.d("error", e.toString());
+//        }
+        final String FinalBuildInfo = "Version " + versionName + "\n Build number " + versionCode + "\n\n";
+        //BuildInfo;
+
+        SpannableString ss = new SpannableString(FinalBuildInfo);
         ClickableSpan clickableSpan = new ClickableSpan() {
             @Override
             public void onClick(View textView) {
                 Toast.makeText(getApplicationContext(), "Copied id to clipboard.", Toast.LENGTH_LONG).show();
-                Utility.setClipboard(getApplicationContext(), Utility.getFirebaseInstanceId(getApplicationContext()));
+                FirebaseMessaging.getInstance().getToken()
+                        .addOnCompleteListener(new OnCompleteListener<String>() {
+                            @Override
+                            public void onComplete(@NonNull Task<String> task) {
+                                if (!task.isSuccessful()) {
+                                    System.out.println("Fetching FCM registration token failed");
+                                    return;
+                                }
+                                // Get new FCM registration token
+                                String token = task.getResult();
+                                Log.i("Firebase Token", token);
+                                Toast.makeText(getApplicationContext(), "Firebase Token: " + token, Toast.LENGTH_SHORT).show();
+                                Utility.setClipboard(getApplicationContext(), token);
+                            }
+                        });
+
+                // Utility.setClipboard(getApplicationContext(), Utility.getFirebaseInstanceId(getApplicationContext()));
             }
 
             @Override
@@ -71,9 +105,10 @@ public class AboutActivity extends AppCompatActivity {
             }
         };
         ss.setSpan(clickableSpan, 0, FinalBuildInfo.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-        MyFirebaseInstanceIdService myFirebaseInstanceIdService = new MyFirebaseInstanceIdService();
-        Intent intent = new Intent(getApplicationContext(), myFirebaseInstanceIdService.getClass());
+        MyFirebaseMessagingService myFMS = new MyFirebaseMessagingService();
+        //MyFirebaseInstanceIdService myFirebaseInstanceIdService = new MyFirebaseInstanceIdService();
+        Intent intent = new Intent(getApplicationContext(), myFMS.getClass());
+        //Intent intent = new Intent(getApplicationContext(), myFirebaseInstanceIdService.getClass());
         //   Log.d(this.getClass().getSimpleName(),"Starting MyFirebaseInstanceIdService");
         startService(intent);
 
@@ -83,24 +118,23 @@ public class AboutActivity extends AppCompatActivity {
         textView.append("Source code:\n");
 
         String url = "<a href=\"https://github.com/Varun-garg/gbu-timetable_sql\">https://github.com/Varun-garg/gbu-timetable_sql</a>";
-        textView.append(Html.fromHtml(url));
+        textView.append(HtmlCompat.fromHtml(url, 0));
         textView.append("\n\n");
         textView.append("Developed under guidance of Dr. Amit K. Awasthi\n\n");
         textView.append("Developed by Varun Garg <");
-        textView.append(Html.fromHtml("<a href=\"mailto:varun.10@live.com\">Email Varun</a>><br />"));
+        textView.append(HtmlCompat.fromHtml("<a href=\"mailto:varun.10@live.com\">Email Varun</a>><br />", 0));
         textView.append("Share Timetable feature by Ritik Channa\n <");
-        textView.append(Html.fromHtml("<a href=\"mailto:chnritik@gmail.com\">Email Ritik</a>><br />"));
+        textView.append(HtmlCompat.fromHtml("<a href=\"mailto:chnritik@gmail.com\">Email Ritik</a>><br />", 0));
         textView.append("\nThanks to CyanogenMod for MD5 library\n\n");
         textView.append("Released Under GPLv3 Licence");
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            // Respond to the action bar's Up/Home button
-            case android.R.id.home:
-                onBackPressed();
-                return true;
+        // Respond to the action bar's Up/Home button
+        if (item.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }

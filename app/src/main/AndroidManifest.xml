@@ -3,40 +3,56 @@
     package="com.varun.gbu_timetables">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 
     <application
-        android:allowBackup="true"
-        android:fullBackupContent="true"
-        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-        <meta-data
+        android:icon="@mipmap/ic_launcher"
+        android:requestLegacyExternalStorage="true">
+        <activity
+            android:name=".Notice"
+            android:label="@string/title_activity_notice"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <!--
+           <meta-data
             android:name="io.fabric.ApiKey"
             android:value="26b512ff54604e262c20c6ac0c71a6aac2b4cc73" />
+        -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_notification_statue_buddha" />
+            android:resource="@drawable/gbu_remastered" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/app_bg_dark" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/notification_channel_id" />
 
         <activity
             android:name=".MainActivity"
-            android:label="@string/app_name"
+            android:exported="true"
             android:theme="@style/AppTheme.NoActionBar" />
 
         <provider
-            android:name=".data.Database.TimetableProvider"
+            android:name=".data.database.TimetableProvider"
             android:authorities="com.varun.gbu_timetables"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="false" />
         <provider
-            android:name="android.support.v4.content.FileProvider"
+            android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
@@ -47,15 +63,19 @@
 
         <receiver
             android:name=".service.BootReceiver"
-            android:enabled="true">
+            android:enabled="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
 
         <activity
             android:name=".TimetableActivity"
+            android:exported="true"
             android:label="@string/title_activity_timetable"
             android:parentActivityName=".MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
@@ -63,8 +83,10 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
         </activity>
+
         <activity
             android:name=".SettingsActivity"
+            android:exported="true"
             android:label="@string/title_activity_settings"
             android:parentActivityName=".MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
@@ -79,6 +101,7 @@
 
         <activity
             android:name=".AboutActivity"
+            android:exported="true"
             android:label="@string/title_activity_about"
             android:parentActivityName=".MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
@@ -89,21 +112,31 @@
                 android:value=".MainActivity" />
         </activity>
 
-        <service android:name=".service.FirebaseNotificationReceiver">
+        <service
+            android:name=".service.FirebaseNotificationReceiver"
+            android:exported="true">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
         <service
             android:name=".service.MyFirebaseInstanceIdService"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".service.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
 
         <activity
             android:name=".SplashScreenActivity"
+            android:exported="true"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <category android:name="android.intent.category.DEFAULT" />
@@ -117,6 +150,7 @@
         </activity>
         <activity
             android:name=".CourseStructure"
+            android:exported="true"
             android:label="@string/title_activity_course_structure"
             android:parentActivityName=".MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
@@ -124,7 +158,6 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.varun.gbu_timetables.MainActivity" />
         </activity>
-
     </application>
 
 </manifest>

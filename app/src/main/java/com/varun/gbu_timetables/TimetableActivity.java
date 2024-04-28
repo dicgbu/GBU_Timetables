@@ -1,6 +1,7 @@
 package com.varun.gbu_timetables;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -12,22 +13,24 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.FileProvider;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.varun.gbu_timetables.data.Model.TimeTableBasic;
+import com.varun.gbu_timetables.data.model.TimeTableBasic;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -49,7 +52,7 @@ public class TimetableActivity extends AppCompatActivity {
     SharedPreferences.Editor editor;
     String message = "";
     private TimeTableBasic myclass;
-    private String myclass_TAG = "myclass";
+    private final String myclass_TAG = "myclass";
     private Boolean isFABOpen = false;
     private FloatingActionButton fab_main, fab_fav, fab_myclass, fab_share;
     private int saved_theme;
@@ -264,13 +267,13 @@ public class TimetableActivity extends AppCompatActivity {
         fab_share.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (ContextCompat.checkSelfPermission(TimetableActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                if (ContextCompat.checkSelfPermission(TimetableActivity.this, Manifest.permission.READ_MEDIA_IMAGES)
                         == PackageManager.PERMISSION_GRANTED) {
                     File png;
                     if (stored_mode.equals("0"))
                         png = SaveBitmapasPNG(BitmapfromView(findViewById(R.id.timetable_pager), null), Environment.getExternalStorageDirectory().getAbsolutePath());
                     else
-//                        png = SaveBitmapasPNG(BitmapfromView(findViewById(R.id.timetable_table), findViewById(R.id.timetable_faculty_data)), Environment.getExternalStorageDirectory().getAbsolutePath());
+//                       // png = SaveBitmapasPNG(BitmapfromView(findViewById(R.id.timetable_table), findViewById(R.id.timetable_faculty_data)), Environment.getExternalStorageDirectory().getAbsolutePath());
                         png = SaveBitmapasPNG(BitmapfromView(findViewById(R.id.timetable_table), null), Environment.getExternalStorageDirectory().getAbsolutePath());
                     if (png == null)
                         return;
@@ -286,36 +289,33 @@ public class TimetableActivity extends AppCompatActivity {
                     }
                 } else {
                     ActivityCompat.requestPermissions(TimetableActivity.this,
-                            new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                            new String[]{Manifest.permission.READ_MEDIA_IMAGES},
                             MY_PERMISSIONS_REQUEST_WRITE_STORAGE);
                 }
             }
         });
     }
 
+    @SuppressLint("MissingSuperCall")
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case MY_PERMISSIONS_REQUEST_WRITE_STORAGE: {
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    fab_share.performClick();
-                } else {
-
-                }
-                return;
+                                           String[] permissions, int[] grantResults) {
+        if (requestCode == MY_PERMISSIONS_REQUEST_WRITE_STORAGE) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                fab_share.performClick();
+            } else {
+                Toast.makeText(this, "Need permission to add background image", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            // Respond to the action bar's Up/Home button
-            case android.R.id.home:
-                onBackPressed();
-                return true;
+        // Respond to the action bar's Up/Home button
+        if (item.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }

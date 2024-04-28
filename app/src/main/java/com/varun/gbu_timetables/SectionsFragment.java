@@ -1,20 +1,22 @@
 package com.varun.gbu_timetables;
 
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.ExpandableListView;
 
+import androidx.fragment.app.Fragment;
+
 import com.varun.gbu_timetables.adaptor.SectionsFacultyAdapter;
-import com.varun.gbu_timetables.data.Database.TimetableContract;
+import com.varun.gbu_timetables.data.database.TimetableContract;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,6 +34,7 @@ public class SectionsFragment extends Fragment {
     ProgressDialog progressDialog;
     SectionsFacultyAdapter schoolsAdapter;
 
+    @SuppressLint("Range")
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,17 +50,17 @@ public class SectionsFragment extends Fragment {
         Cursor schools_c = getContext().getContentResolver().query(Schools_uri, null, null, null, null);
 
         while (schools_c.moveToNext()) {
-            String school = schools_c.getString(schools_c.getColumnIndex("school"));
+            @SuppressLint("Range") String school = schools_c.getString(schools_c.getColumnIndex("school"));
             HeaderListData.add(school);
-            Long Program_id = schools_c.getLong(schools_c.getColumnIndex("program_id"));
+            @SuppressLint("Range") Long Program_id = schools_c.getLong(schools_c.getColumnIndex("program_id"));
             Uri Program_uri = TimetableContract.BuildSectionWithProgramId(Program_id);
             Cursor program_cursor = getContext().getContentResolver().query(Program_uri, null, null, null, null);
             List<SectionsFacultyAdapter.Common_type> Sections = ChildrenListData.get(school);
             if (Sections == null) Sections = new ArrayList<>();
             while (program_cursor.moveToNext()) {
                 SectionsFacultyAdapter.Common_type s = new SectionsFacultyAdapter.Common_type();
-                s.id = program_cursor.getLong(program_cursor.getColumnIndex("section_id"));
-                s.Name = program_cursor.getString(program_cursor.getColumnIndex("Name")).trim();
+                s.id = program_cursor.getLong(program_cursor.getColumnIndex("Section_Id"));
+                s.Name = program_cursor.getString(program_cursor.getColumnIndex("SectionName")).trim();
                 s.Name = Utility.getFullSectionName(s.Name, getContext());
                 Sections.add(s);
             }
@@ -86,11 +89,7 @@ public class SectionsFragment extends Fragment {
         vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
-                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
-                    schools_lv.setIndicatorBounds(schools_lv.getRight() - Utility.convertDpToPixel(60, context), schools_lv.getWidth());
-                } else {
-                    schools_lv.setIndicatorBoundsRelative(schools_lv.getRight() - Utility.convertDpToPixel(60, context), schools_lv.getWidth());
-                }
+                schools_lv.setIndicatorBoundsRelative(schools_lv.getRight() - Utility.convertDpToPixel(60, context), schools_lv.getWidth());
             }
         });
 
